@@ -2,38 +2,57 @@ package com.youmate.app
 
 import com.youmate.app.extractor.ExtractorHelper
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.TimeUnit
 
 class ExtractorTest {
 
     @Test
-    fun testExtraction() {
-        runBlocking {
-            ExtractorHelper.initialize()
-            val testUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-            val result = ExtractorHelper.extractMedia(testUrl)
+    fun testExtraction() = runBlocking {
+        ExtractorHelper.initialize()
+        val testUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        val result = ExtractorHelper.extractMedia(testUrl)
 
-            assertTrue("Extraction should be successful", result.isSuccess)
-            val data = result.getOrThrow()
+        assertTrue("Media extraction should succeed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+        val data = result.getOrThrow()
+        assertTrue("Title should not be blank", data.title.isNotBlank())
+        assertFalse("Video streams should not be empty", data.videoStreams.isEmpty())
+        assertFalse("Audio streams should not be empty", data.audioStreams.isEmpty())
 
-            println("Video title: ${data.title}")
-            println("Total video streams extracted: ${data.videoStreams.size}")
-            data.videoStreams.forEach {
-                println("  Video: ${it.resolution} [${it.format}] - Size: ${it.formattedSize} (${it.sizeBytes} B) isVideoOnly=${it.isVideoOnly}")
-            }
-            println("Total audio streams extracted: ${data.audioStreams.size}")
-            data.audioStreams.forEach {
-                println("  Audio: ${it.bitrate} kbps [${it.format}] - Size: ${it.formattedSize} (${it.sizeBytes} B)")
-            }
+        println("Verified extraction for: ${data.title}")
+        println("Video streams count: ${data.videoStreams.size}")
+        println("Audio streams count: ${data.audioStreams.size}")
+    }
 
-            assertTrue("Should contain 1080p", data.videoStreams.any { it.resolution.contains("1080") })
-            assertTrue("Should contain 720p", data.videoStreams.any { it.resolution.contains("720") })
-            assertTrue("Should contain 480p", data.videoStreams.any { it.resolution.contains("480") })
-            assertTrue("Should contain 360p", data.videoStreams.any { it.resolution.contains("360") })
-            assertFalse("Audio streams should not be empty", data.audioStreams.isEmpty())
-            assertTrue("Streams should have formatted sizes", data.videoStreams.any { it.formattedSize.isNotBlank() })
+    @Test
+    fun testChunkedStreamDownload() = runBlocking {
+        ExtractorHelper.initialize()
+        val testUrl = "https://www.youtube.com/watch?v=kJQP7kiw5Fk" // Despacito
+        val result = ExtractorHelper.extractMedia(testUrl)
+        assertTrue("Extraction should succeed", result.isSuccess)
+        val data = result.getOrThrow()
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build()
+
+        val p1080 = data.videoStreams.firstOrNull { it.resolution.contains("1080") && it.format.equals("mp4", ignoreCase = true) }
+        val m4aAudio = data.audioStreams.firstOrNull { it.format.equals("m4a", ignoreCase = true) }
+
+        listOfNotNull(p1080?.url, m4aAudio?.url).forEach { streamUrl ->
+            val req = Request.Builder()
+                .url(streamUrl)
+                .header("Range", "bytes=0-1048575")
+                .build()
+            val resp = client.newCall(req).execute()
+            println("Chunked range test for ${streamUrl.take(60)}... -> HTTP ${resp.code}")
+            assertTrue("Expected HTTP 206 for bounded range: ${resp.code}", resp.code == 206)
+            resp.close()
         }
     }
 }

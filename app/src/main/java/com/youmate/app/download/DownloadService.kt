@@ -98,23 +98,35 @@ class DownloadService : Service() {
 
         Log.i("DownloadService", "Iniciando descarga: $fileName desde $streamUrl")
 
-        // Browser User-Agent matching NewPipeExtractor to bypass YouTube CDN 403 blocks
-        val request = Request.Builder()
-            .url(streamUrl)
-            .header(
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
-            .build()
-
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw IOException("El servidor respondió con código HTTP ${response.code}")
+        // User-Agent matching client type to maintain compatibility with YouTube CDN
+        val userAgent = when {
+            streamUrl.contains("c=IOS") -> "com.google.ios.youtube/21.03.2(iPhone16,2; U; CPU iOS 18_7_2 like Mac OS X; GB)"
+            streamUrl.contains("c=ANDROID") -> "com.google.android.youtube/21.03.36 (Linux; U; Android 15; GB) gzip"
+            else -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
         }
 
-        val body = response.body ?: throw IOException("Respuesta del servidor vacía")
-        val totalBytes = body.contentLength()
-        val inputStream = body.byteStream()
+        // 1. Resolve total file size (clen query parameter or Range probe)
+        var totalBytes = Regex("""[?&]clen=(\d+)""").find(streamUrl)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+
+        if (totalBytes <= 0L) {
+            runCatching {
+                val probeReq = Request.Builder()
+                    .url(streamUrl)
+                    .header("User-Agent", userAgent)
+                    .header("Range", "bytes=0-0")
+                    .build()
+
+                httpClient.newCall(probeReq).execute().use { probeResp ->
+                    if (probeResp.isSuccessful || probeResp.code == 206) {
+                        val cr = probeResp.header("Content-Range")
+                        totalBytes = cr?.substringAfterLast("/")?.toLongOrNull() ?: 0L
+                        if (totalBytes <= 0L) {
+                            totalBytes = probeResp.header("Content-Length")?.toLongOrNull() ?: 0L
+                        }
+                    }
+                }
+            }
+        }
 
         var outputStream: OutputStream? = null
         var targetUri: Uri? = null
@@ -143,31 +155,114 @@ class DownloadService : Service() {
             }
 
             val buffer = ByteArray(64 * 1024)
-            var bytesRead: Int
-            var totalRead = 0L
+            val chunkSize = 2L * 1024L * 1024L // 2MB chunk prevents YouTube CDN 403 blocks
+            var currentStart = 0L
             var lastUpdateMillis = System.currentTimeMillis()
 
             outputStream.use { out ->
-                inputStream.use { input ->
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        out.write(buffer, 0, bytesRead)
-                        totalRead += bytesRead
+                if (totalBytes > 0L) {
+                    // Known size: sequentially download bounded byte ranges (bytes=start-end)
+                    while (currentStart < totalBytes) {
+                        val currentEnd = (currentStart + chunkSize - 1L).coerceAtMost(totalBytes - 1L)
+                        var chunkSuccess = false
+                        var lastException: Exception? = null
 
-                        val now = System.currentTimeMillis()
-                        if (now - lastUpdateMillis > 500) {
-                            lastUpdateMillis = now
-                            val percent = if (totalBytes > 0L) ((totalRead * 100) / totalBytes).toInt() else -1
-                            val downloadedStr = ExtractorHelper.formatFileSize(totalRead)
-                            val totalStr = if (totalBytes > 0L) ExtractorHelper.formatFileSize(totalBytes) else "..."
-                            val infoText = "$downloadedStr / $totalStr (${if (percent >= 0) "$percent%" else ""})"
+                        for (attempt in 1..3) {
+                            try {
+                                val chunkReq = Request.Builder()
+                                    .url(streamUrl)
+                                    .header("User-Agent", userAgent)
+                                    .header("Range", "bytes=$currentStart-$currentEnd")
+                                    .build()
 
-                            val notification = buildProgressNotification(notificationId, title, percent, infoText)
-                            notificationManager.notify(notificationId, notification)
+                                httpClient.newCall(chunkReq).execute().use { chunkResp ->
+                                    if (!chunkResp.isSuccessful && chunkResp.code != 206) {
+                                        throw IOException("El servidor respondió con código HTTP ${chunkResp.code}")
+                                    }
+                                    val body = chunkResp.body ?: throw IOException("Cuerpo de respuesta vacío")
+                                    val input = body.byteStream()
+                                    var n: Int
+                                    while (input.read(buffer).also { n = it } != -1) {
+                                        out.write(buffer, 0, n)
+                                        currentStart += n
 
-                            DownloadProgressTracker.updateProgress(title, percent, downloadedStr, totalStr)
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastUpdateMillis > 500) {
+                                            lastUpdateMillis = now
+                                            val percent = ((currentStart * 100) / totalBytes).toInt().coerceIn(0, 100)
+                                            val downloadedStr = ExtractorHelper.formatFileSize(currentStart)
+                                            val totalStr = ExtractorHelper.formatFileSize(totalBytes)
+                                            val infoText = "$downloadedStr / $totalStr ($percent%)"
+
+                                            notificationManager.notify(
+                                                notificationId,
+                                                buildProgressNotification(notificationId, title, percent, infoText)
+                                            )
+                                            DownloadProgressTracker.updateProgress(title, percent, downloadedStr, totalStr)
+                                        }
+                                    }
+                                }
+                                out.flush()
+                                chunkSuccess = true
+                                break
+                            } catch (e: Exception) {
+                                lastException = e
+                                Log.w("DownloadService", "Intento $attempt falló para bloque $currentStart-$currentEnd: ${e.message}")
+                                Thread.sleep(400)
+                            }
+                        }
+
+                        if (!chunkSuccess) {
+                            throw (lastException ?: IOException("Error al descargar el bloque de datos"))
                         }
                     }
-                    out.flush()
+                } else {
+                    // Fallback for unknown total length: request sequential bounded chunks until EOF / 416
+                    var finished = false
+                    while (!finished) {
+                        val currentEnd = currentStart + chunkSize - 1L
+                        val chunkReq = Request.Builder()
+                            .url(streamUrl)
+                            .header("User-Agent", userAgent)
+                            .header("Range", "bytes=$currentStart-$currentEnd")
+                            .build()
+
+                        httpClient.newCall(chunkReq).execute().use { chunkResp ->
+                            if (chunkResp.code == 416) {
+                                finished = true
+                                return@use
+                            }
+                            if (!chunkResp.isSuccessful && chunkResp.code != 206) {
+                                throw IOException("El servidor respondió con código HTTP ${chunkResp.code}")
+                            }
+                            val body = chunkResp.body ?: throw IOException("Cuerpo de respuesta vacío")
+                            val input = body.byteStream()
+                            var bytesInChunk = 0L
+                            var n: Int
+                            while (input.read(buffer).also { n = it } != -1) {
+                                out.write(buffer, 0, n)
+                                currentStart += n
+                                bytesInChunk += n
+
+                                val now = System.currentTimeMillis()
+                                if (now - lastUpdateMillis > 500) {
+                                    lastUpdateMillis = now
+                                    val downloadedStr = ExtractorHelper.formatFileSize(currentStart)
+                                    val infoText = "$downloadedStr descargados"
+
+                                    notificationManager.notify(
+                                        notificationId,
+                                        buildProgressNotification(notificationId, title, -1, infoText)
+                                    )
+                                    DownloadProgressTracker.updateProgress(title, -1, downloadedStr, "")
+                                }
+                            }
+                            out.flush()
+                            if (bytesInChunk == 0L || bytesInChunk < chunkSize) {
+                                finished = true
+                            }
+                        }
+                    }
                 }
             }
 
@@ -187,12 +282,12 @@ class DownloadService : Service() {
                 )
             }
 
-            Log.i("DownloadService", "Descarga completada con éxito: $fileName ($totalRead bytes)")
+            Log.i("DownloadService", "Descarga completada con éxito: $fileName ($currentStart bytes)")
             showSuccessNotification(notificationId, title, fileName, targetUri, mimeType)
             DownloadProgressTracker.complete(title)
 
         } catch (e: Exception) {
-            // Clean up incomplete entry if needed
+            // Clean up incomplete entry if error occurs
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && targetUri != null) {
                 runCatching { contentResolver.delete(targetUri, null, null) }
             } else if (localFile?.exists() == true) {
