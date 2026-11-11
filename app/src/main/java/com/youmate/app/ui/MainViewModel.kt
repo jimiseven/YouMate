@@ -239,8 +239,8 @@ class MainViewModel : ViewModel() {
         // Close BottomSheet immediately
         _uiState.update { it.copy(showBottomSheet = false) }
 
-        // Enqueue with DownloadManager
-        DownloadHelper.enqueueDownload(
+        // Start download service with OkHttp
+        DownloadHelper.startDownload(
             context = context,
             streamUrl = streamUrl,
             title = result.title,
@@ -249,7 +249,7 @@ class MainViewModel : ViewModel() {
         ).onSuccess {
             _uiState.update {
                 it.copy(
-                    successMessage = "Descarga iniciada. Guardando en 'Descargas'...",
+                    successMessage = "Iniciando descarga en segundo plano...",
                     urlInput = ""
                 )
             }

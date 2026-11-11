@@ -20,3 +20,6 @@
 
 # Kotlin Coroutines & Reflection
 -keep class kotlinx.coroutines.** { *; }
+
+# Download Service
+-keep class com.youmate.app.download.** { *; }
