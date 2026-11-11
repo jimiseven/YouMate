@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">YouMate</string>
+    <string name="paste_hint">Pega un enlace de YouTube aquí...</string>
+    <string name="btn_extract">Obtener Medios</string>
+    <string name="extracting">Extrayendo información del video...</string>
+    <string name="tab_video">Video</string>
+    <string name="tab_audio">Audio</string>
+    <string name="format_label">Formato:</string>
+    <string name="resolution_label">Resolución:</string>
+    <string name="quality_label">Calidad de Audio:</string>
+    <string name="btn_download">Descargar Ahora</string>
+    <string name="download_started">Descarga iniciada en segundo plano</string>
+    <string name="notification_permission_title">Permiso de Notificación</string>
+    <string name="notification_permission_desc">YouMate necesita permiso de notificación para mostrar el progreso de tus descargas en Android 13+.</string>
+    <string name="grant_permission">Conceder Permiso</string>
+    <string name="error_invalid_url">La URL ingresada no es un enlace válido de YouTube.</string>
+    <string name="error_extraction_failed">Error al procesar el enlace. Intenta con otro video.</string>
+    <string name="share_instruction">También puedes compartir cualquier video desde la app oficial de YouTube hacia YouMate.</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Play button shape -->
+    <path
+        android:fillColor="#FF0033"
+        android:pathData="M30,24 C26.68,24 24,26.68 24,30 L24,78 C24,81.32 26.68,84 30,84 L78,84 C81.32,84 84,81.32 84,78 L84,30 C84,26.68 81.32,24 78,24 Z" />
+    <!-- Download arrow -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,34 L54,60 M44,52 L54,62 L64,52 M40,68 L68,68"
+        android:strokeWidth="4"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

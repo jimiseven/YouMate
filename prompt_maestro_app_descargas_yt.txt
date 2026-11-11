@@ -1,0 +1,32 @@
+Actúa como un desarrollador Senior de Android experto en Kotlin y Jetpack Compose. 
+Tu tarea es generar el código completo para una aplicación de uso personal diseñada para descargar videos y audios de YouTube. 
+
+OBJETIVO DEL PROYECTO:
+Crear una aplicación extremadamente ligera (menos de 5MB), muy rápida y nativa, optimizada para Android 13 (API 33). No debe tener navegación compleja, su función principal es actuar como un receptor de enlaces compartidos.
+
+FLUJO DE USUARIO REQUERIDO:
+1. Recepción del enlace: La app debe registrarse en el sistema operativo a través del AndroidManifest para interceptar intenciones de compartir (ACTION_SEND, text/plain). Cuando el usuario presione "Compartir" en la app oficial de YouTube, esta app debe aparecer en el menú. También debe tener una pantalla principal básica con un TextField y un botón por si el usuario decide abrir la app y pegar el link manualmente.
+2. Procesamiento (Extracción): Al recibir la URL, la app debe extraer en segundo plano los metadatos del video (título y streams disponibles) mostrando un indicador de carga.
+3. Selección (BottomSheet): Una vez extraídos los datos, se desplegará un ModalBottomSheet de Jetpack Compose desde abajo con dos pestañas o secciones:
+   - VIDEO: Selector de formato (MP4, WebM) y selector de resolución disponible (ej. 1080p, 720p, 360p).
+   - AUDIO: Selector de formato (M4A, Opus) y calidad.
+4. Descarga (DownloadManager): Al confirmar, el BottomSheet se cierra y se pasa la URL directa del archivo multimedia al `DownloadManager` nativo de Android. 
+
+REQUISITOS TÉCNICOS ESTRICTOS (¡IMPORTANTE!):
+- Lenguaje: 100% Kotlin.
+- Interfaz de Usuario: Jetpack Compose (Material Design 3).
+- Motor de Extracción de YouTube: DEBES usar la librería nativa `NewPipeExtractor`. ESTÁ ESTRICTAMENTE PROHIBIDO usar wrappers de yt-dlp o Python embebido para evitar inflar el tamaño de la APK.
+- Motor de Descarga: Usa la clase nativa `android.app.DownloadManager`. Esto asegura que la descarga se realice en segundo plano, se muestre en las notificaciones del sistema y el archivo se guarde en la carpeta pública "Descargas" (Environment.DIRECTORY_DOWNLOADS).
+- Compatibilidad Android 13 (API 33+): 
+  - Debes gestionar correctamente el permiso POST_NOTIFICATIONS para poder mostrar el progreso de descarga.
+  - NO pidas permisos obsoletos como READ_EXTERNAL_STORAGE o WRITE_EXTERNAL_STORAGE. Usa las APIs de almacenamiento con alcance (Scoped Storage) y el DownloadManager nativo que no requiere permisos de escritura en la carpeta pública de descargas.
+
+ENTREGABLES QUE DEBES GENERAR EN TU RESPUESTA:
+Por favor, proporciona el código completo y organizado para los siguientes archivos:
+1. `build.gradle.kts` (Módulo App): Con todas las dependencias necesarias de Jetpack Compose y la forma correcta de importar NewPipeExtractor.
+2. `AndroidManifest.xml`: Configurado con los permisos de INTERNET, POST_NOTIFICATIONS, y el <intent-filter> para ACTION_SEND.
+3. `ExtractorHelper.kt`: Una clase o repositorio que inicialice NewPipeExtractor, reciba la URL de YouTube y devuelva una lista de streams de video y audio limpios.
+4. `DownloadHelper.kt`: Una clase encargada de tomar la URL del stream puro (mp4/m4a), el título del video, y encolar la tarea en el DownloadManager de Android.
+5. `MainActivity.kt`: El código completo de la UI en Compose. Debe manejar la recepción del Intent, el estado de carga, la pantalla principal (TextField) y el ModalBottomSheet para la selección de calidades.
+
+Escribe código limpio, moderno, con manejo de corrutinas (viewModelScope o lifecycleScope) para evitar bloquear el hilo principal durante la extracción.
