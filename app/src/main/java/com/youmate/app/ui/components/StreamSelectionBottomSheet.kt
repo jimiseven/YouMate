@@ -273,9 +273,9 @@ fun VideoSelectionSection(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (stream.isVideoOnly) "Video alta calidad (DASH)" else "Video + Audio integrado",
+                                text = if (stream.isVideoOnly) "Video HD (DASH)" else "Video + Audio integrado",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (stream.isVideoOnly) MaterialTheme.colorScheme.onSurfaceVariant else RedPrimary
                             )
                         }
                     }
@@ -285,7 +285,7 @@ fun VideoSelectionSection(
                         color = if (stream.isVideoOnly) MaterialTheme.colorScheme.surfaceVariant else RedPrimary.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            text = stream.format.uppercase(),
+                            text = if (stream.isVideoOnly) "${stream.format.uppercase()} (DASH)" else "${stream.format.uppercase()} ★",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,

@@ -43,6 +43,10 @@ object ExtractorHelper {
         return null
     }
 
+    private fun parseResolutionHeight(resolution: String): Int {
+        return Regex("""(\d+)""").find(resolution)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+    }
+
     /**
      * Extracts video metadata, progressive streams, video-only streams, and audio streams.
      * Runs asynchronously on Dispatchers.IO.
@@ -54,8 +58,23 @@ object ExtractorHelper {
             val cleanUrl = extractCleanUrl(rawUrl)
                 ?: throw IllegalArgumentException("No se encontró una URL de YouTube válida.")
 
-            // Fetch stream info using NewPipeExtractor
-            val streamInfo = StreamInfo.getInfo(ServiceList.YouTube, cleanUrl)
+            // Fetch stream info using NewPipeExtractor with iOS client enabled
+            // to obtain all video resolutions (1080p, 720p, 480p, 360p, etc.) and audio streams
+            val service = ServiceList.YouTube
+            val extractor = service.getStreamExtractor(cleanUrl)
+
+            runCatching {
+                val field = extractor.javaClass.getDeclaredField("fetchIosClient")
+                field.isAccessible = true
+                field.setBoolean(extractor, true)
+            }
+            runCatching {
+                val method = extractor.javaClass.getDeclaredMethod("setFetchIosClient", Boolean::class.javaPrimitiveType)
+                method.isAccessible = true
+                method.invoke(extractor, true)
+            }
+
+            val streamInfo = StreamInfo.getInfo(extractor)
 
             val title = streamInfo.name.orEmpty().ifBlank { "YouTube_Video" }
             val uploader = streamInfo.uploaderName.orEmpty().ifBlank { "Desconocido" }
@@ -63,8 +82,8 @@ object ExtractorHelper {
                 ?: streamInfo.thumbnails?.firstOrNull()?.url
             val duration = streamInfo.duration
 
-            // Collect video streams (both progressive video+audio and video-only)
-            val videoList = mutableListOf<VideoStreamItem>()
+            // Collect video streams (both progressive video+audio and video-only DASH)
+            val rawVideoList = mutableListOf<VideoStreamItem>()
 
             // 1. Progressive streams (contains both video and audio)
             streamInfo.videoStreams?.forEach { stream ->
@@ -72,7 +91,7 @@ object ExtractorHelper {
                     ?: runCatching { stream.format?.name?.lowercase() }.getOrNull()
                     ?: "mp4"
 
-                videoList.add(
+                rawVideoList.add(
                     VideoStreamItem(
                         resolution = stream.resolution.orEmpty().ifBlank { stream.quality.orEmpty() },
                         format = formatSuffix,
@@ -83,13 +102,13 @@ object ExtractorHelper {
                 )
             }
 
-            // 2. Video-only DASH streams (e.g., 1080p, 1440p, 4K)
+            // 2. Video-only DASH streams (e.g., 2160p, 1440p, 1080p, 720p, 480p)
             streamInfo.videoOnlyStreams?.forEach { stream ->
                 val formatSuffix = runCatching { stream.format?.suffix }.getOrNull()
                     ?: runCatching { stream.format?.name?.lowercase() }.getOrNull()
                     ?: "mp4"
 
-                videoList.add(
+                rawVideoList.add(
                     VideoStreamItem(
                         resolution = stream.resolution.orEmpty().ifBlank { stream.quality.orEmpty() },
                         format = formatSuffix,
@@ -100,14 +119,24 @@ object ExtractorHelper {
                 )
             }
 
+            // Sort by resolution height descending (1080p > 720p > 480p > 360p),
+            // prioritizing streams with integrated audio (!isVideoOnly), then deduplicate by (resolution, format)
+            val sortedVideoList = rawVideoList
+                .filter { it.url.isNotBlank() }
+                .sortedWith(
+                    compareByDescending<VideoStreamItem> { parseResolutionHeight(it.resolution) }
+                        .thenBy { it.isVideoOnly }
+                )
+                .distinctBy { "${it.resolution.lowercase()}_${it.format.lowercase()}" }
+
             // Collect audio streams
-            val audioList = mutableListOf<AudioStreamItem>()
+            val rawAudioList = mutableListOf<AudioStreamItem>()
             streamInfo.audioStreams?.forEach { stream ->
                 val formatSuffix = runCatching { stream.format?.suffix }.getOrNull()
                     ?: runCatching { stream.format?.name?.lowercase() }.getOrNull()
                     ?: "m4a"
 
-                audioList.add(
+                rawAudioList.add(
                     AudioStreamItem(
                         format = formatSuffix,
                         bitrate = stream.averageBitrate,
@@ -119,9 +148,9 @@ object ExtractorHelper {
 
             // Fallback: If YouTube only provided progressive video streams (video+audio),
             // offer the progressive stream as an M4A audio option so audio download is always available.
-            if (audioList.isEmpty()) {
+            if (rawAudioList.isEmpty()) {
                 streamInfo.videoStreams?.firstOrNull { !it.url.isNullOrBlank() }?.let { progressive ->
-                    audioList.add(
+                    rawAudioList.add(
                         AudioStreamItem(
                             format = "m4a",
                             bitrate = 128,
@@ -132,13 +161,18 @@ object ExtractorHelper {
                 }
             }
 
+            val sortedAudioList = rawAudioList
+                .filter { it.url.isNotBlank() }
+                .sortedByDescending { it.bitrate }
+                .distinctBy { "${it.bitrate}_${it.format.lowercase()}" }
+
             MediaExtractionResult(
                 title = title,
                 uploader = uploader,
                 thumbnailUrl = thumbnailUrl,
                 durationSeconds = duration,
-                videoStreams = videoList.filter { it.url.isNotBlank() },
-                audioStreams = audioList.filter { it.url.isNotBlank() }
+                videoStreams = sortedVideoList,
+                audioStreams = sortedAudioList
             )
         }
     }

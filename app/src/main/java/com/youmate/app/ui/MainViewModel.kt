@@ -10,6 +10,8 @@ import com.youmate.app.model.AudioStreamItem
 import com.youmate.app.model.MediaExtractionResult
 import com.youmate.app.model.MediaType
 import com.youmate.app.model.VideoStreamItem
+import com.youmate.app.settings.SettingsHelper
+import com.youmate.app.settings.StorageLocation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +24,10 @@ data class MainUiState(
     val errorMessage: String? = null,
     val successMessage: String? = null,
     val showBottomSheet: Boolean = false,
+    val showSettingsDialog: Boolean = false,
+    val storageLocation: StorageLocation = StorageLocation.DOWNLOADS,
+    val subfolder: String = "YouMate",
+    val separateAudio: Boolean = true,
     val extractionResult: MediaExtractionResult? = null,
     val selectedTab: MediaType = MediaType.VIDEO,
     val selectedVideoFormat: String = "mp4",
@@ -161,10 +167,44 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(errorMessage = null, successMessage = null) }
     }
 
+    fun openSettings(context: Context) {
+        val loc = SettingsHelper.getStorageLocation(context)
+        val sub = SettingsHelper.getSubfolder(context)
+        val sep = SettingsHelper.isSeparateAudioEnabled(context)
+        _uiState.update {
+            it.copy(
+                showSettingsDialog = true,
+                storageLocation = loc,
+                subfolder = sub,
+                separateAudio = sep
+            )
+        }
+    }
+
+    fun dismissSettings() {
+        _uiState.update { it.copy(showSettingsDialog = false) }
+    }
+
+    fun updateStorageLocation(context: Context, location: StorageLocation) {
+        SettingsHelper.setStorageLocation(context, location)
+        _uiState.update { it.copy(storageLocation = location) }
+    }
+
+    fun updateSubfolder(context: Context, subfolder: String) {
+        SettingsHelper.setSubfolder(context, subfolder)
+        _uiState.update { it.copy(subfolder = subfolder) }
+    }
+
+    fun updateSeparateAudio(context: Context, enabled: Boolean) {
+        SettingsHelper.setSeparateAudioEnabled(context, enabled)
+        _uiState.update { it.copy(separateAudio = enabled) }
+    }
+
     fun startDownload(context: Context) {
         val state = _uiState.value
         val result = state.extractionResult ?: return
 
+        val isAudio = state.selectedTab == MediaType.AUDIO
         val (streamUrl, format) = when (state.selectedTab) {
             MediaType.VIDEO -> {
                 val stream = state.selectedVideoStream
@@ -192,11 +232,13 @@ class MainViewModel : ViewModel() {
             context = context,
             streamUrl = streamUrl,
             title = result.title,
-            format = format
+            format = format,
+            isAudio = isAudio
         ).onSuccess {
+            val previewPath = SettingsHelper.getPreviewDisplayPath(context, isAudio)
             _uiState.update {
                 it.copy(
-                    successMessage = "Descarga iniciada: ${result.title} ($format)",
+                    successMessage = "Descarga iniciada en $previewPath",
                     urlInput = ""
                 )
             }
