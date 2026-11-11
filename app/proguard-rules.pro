@@ -14,5 +14,9 @@
 -dontwarn okio.**
 -keep class okhttp3.** { *; }
 
+# Jsoup optional dependencies
+-dontwarn com.google.re2j.**
+-dontwarn javax.script.**
+
 # Kotlin Coroutines & Reflection
 -keep class kotlinx.coroutines.** { *; }

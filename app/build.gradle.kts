@@ -93,7 +93,10 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // YouTube Native Extractor
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.24.4")
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.25.2")
+
+    // Unit Testing
+    testImplementation("junit:junit:4.13.2")
 
     // Compose Tooling (Debug only)
     debugImplementation("androidx.compose.ui:ui-tooling")

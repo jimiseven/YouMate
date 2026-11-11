@@ -11,10 +11,12 @@ object DownloadHelper {
      * Sanitizes file names by removing characters invalid on Android / Linux / FAT filesystems.
      */
     fun sanitizeFileName(rawName: String): String {
-        return rawName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        return rawName
+            .replace(Regex("[\r\n\t\u0000-\u001F]"), " ")
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
             .replace(Regex("\\s+"), " ")
             .trim()
-            .take(120) // Keep length reasonable
+            .take(120)
     }
 
     /**
@@ -66,6 +68,9 @@ object DownloadHelper {
                 setAllowedOverMetered(true)
                 setAllowedOverRoaming(true)
                 setMimeType(mimeType)
+                // Add browser User-Agent and Referer headers to ensure YouTube CDN allows full download
+                addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                addRequestHeader("Referer", "https://www.youtube.com")
             }
 
             val downloadId = downloadManager.enqueue(request)

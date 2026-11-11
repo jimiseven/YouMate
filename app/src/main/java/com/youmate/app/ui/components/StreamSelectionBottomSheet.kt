@@ -229,60 +229,69 @@ fun VideoSelectionSection(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 240.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(filteredStreams) { stream ->
-            val isSelected = stream == selectedStream
-            val borderColor = if (isSelected) RedPrimary else MaterialTheme.colorScheme.surfaceVariant
-            val bgColor = if (isSelected) RedPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    if (filteredStreams.isEmpty()) {
+        Text(
+            text = "No hay streams disponibles para este formato.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 240.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filteredStreams) { stream ->
+                val isSelected = stream == selectedStream
+                val borderColor = if (isSelected) RedPrimary else MaterialTheme.colorScheme.surfaceVariant
+                val bgColor = if (isSelected) RedPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(bgColor)
-                    .border(1.dp, borderColor, RoundedCornerShape(10.dp))
-                    .clickable { onStreamSelected(stream) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = { onStreamSelected(stream) },
-                        colors = RadioButtonDefaults.colors(selectedColor = RedPrimary)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = stream.resolution,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(bgColor)
+                        .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+                        .clickable { onStreamSelected(stream) }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onStreamSelected(stream) },
+                            colors = RadioButtonDefaults.colors(selectedColor = RedPrimary)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = stream.resolution,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (stream.isVideoOnly) "Video alta calidad (DASH)" else "Video + Audio integrado",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (stream.isVideoOnly) MaterialTheme.colorScheme.surfaceVariant else RedPrimary.copy(alpha = 0.15f)
+                    ) {
                         Text(
-                            text = if (stream.isVideoOnly) "Video alta calidad (DASH)" else "Video + Audio integrado",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = stream.format.uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (stream.isVideoOnly) MaterialTheme.colorScheme.onSurfaceVariant else RedPrimary
                         )
                     }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (stream.isVideoOnly) MaterialTheme.colorScheme.surfaceVariant else RedPrimary.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = stream.format.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (stream.isVideoOnly) MaterialTheme.colorScheme.onSurfaceVariant else RedPrimary
-                    )
                 }
             }
         }
@@ -343,60 +352,69 @@ fun AudioSelectionSection(
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 240.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(filteredStreams) { stream ->
-            val isSelected = stream == selectedStream
-            val borderColor = if (isSelected) RedPrimary else MaterialTheme.colorScheme.surfaceVariant
-            val bgColor = if (isSelected) RedPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    if (filteredStreams.isEmpty()) {
+        Text(
+            text = "No hay streams disponibles para este formato.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 240.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filteredStreams) { stream ->
+                val isSelected = stream == selectedStream
+                val borderColor = if (isSelected) RedPrimary else MaterialTheme.colorScheme.surfaceVariant
+                val bgColor = if (isSelected) RedPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(bgColor)
-                    .border(1.dp, borderColor, RoundedCornerShape(10.dp))
-                    .clickable { onStreamSelected(stream) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = { onStreamSelected(stream) },
-                        colors = RadioButtonDefaults.colors(selectedColor = RedPrimary)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = if (stream.bitrate > 0) "${stream.bitrate} kbps" else "Calidad Estándar",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(bgColor)
+                        .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+                        .clickable { onStreamSelected(stream) }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = { onStreamSelected(stream) },
+                            colors = RadioButtonDefaults.colors(selectedColor = RedPrimary)
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = if (stream.bitrate > 0) "${stream.bitrate} kbps" else "Calidad Estándar",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Audio estéreo (${stream.quality.ifBlank { "Original" }})",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = RedPrimary.copy(alpha = 0.15f)
+                    ) {
                         Text(
-                            text = "Audio estéreo (${stream.quality.ifBlank { "Original" }})",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = stream.format.uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = RedPrimary
                         )
                     }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = RedPrimary.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = stream.format.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = RedPrimary
-                    )
                 }
             }
         }

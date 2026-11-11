@@ -117,6 +117,21 @@ object ExtractorHelper {
                 )
             }
 
+            // Fallback: If YouTube only provided progressive video streams (video+audio),
+            // offer the progressive stream as an M4A audio option so audio download is always available.
+            if (audioList.isEmpty()) {
+                streamInfo.videoStreams?.firstOrNull { !it.url.isNullOrBlank() }?.let { progressive ->
+                    audioList.add(
+                        AudioStreamItem(
+                            format = "m4a",
+                            bitrate = 128,
+                            url = progressive.url.orEmpty(),
+                            quality = "128 kbps (Audio AAC)"
+                        )
+                    )
+                }
+            }
+
             MediaExtractionResult(
                 title = title,
                 uploader = uploader,
