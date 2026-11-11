@@ -60,7 +60,7 @@ object DownloadHelper {
             val mimeType = getMimeType(safeExtension)
 
             val targetDirType = SettingsHelper.resolveDirectoryType(context, isAudio)
-            val subPath = SettingsHelper.resolveSubPath(context, fileName)
+            val subPath = SettingsHelper.resolveSubPath(context, targetDirType, fileName)
 
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
                 ?: throw IllegalStateException("DownloadManager no está disponible en este dispositivo.")
@@ -73,9 +73,13 @@ object DownloadHelper {
                 setAllowedOverMetered(true)
                 setAllowedOverRoaming(true)
                 setMimeType(mimeType)
-                // Add browser User-Agent and Referer headers to ensure YouTube CDN allows full download
-                addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
-                addRequestHeader("Referer", "https://www.youtube.com")
+                // Safely add headers if supported by system DownloadManager
+                runCatching {
+                    addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                }
+                runCatching {
+                    addRequestHeader("Referer", "https://www.youtube.com")
+                }
             }
 
             val downloadId = downloadManager.enqueue(request)

@@ -37,7 +37,7 @@ object SettingsHelper {
 
     fun getSubfolder(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_SUBFOLDER, "YouMate")?.trim().orEmpty()
+        return prefs.getString(KEY_SUBFOLDER, "")?.trim().orEmpty()
     }
 
     fun setSubfolder(context: Context, subfolder: String) {
@@ -68,15 +68,25 @@ object SettingsHelper {
     }
 
     /**
-     * Resolves the relative path inside the public directory (e.g. "YouMate/my_video.mp4").
+     * Resolves the safe relative path for DownloadManager.
+     * If the subfolder exists or can be created, saves inside it.
+     * Otherwise, safely defaults to the root of the directory to prevent ENOENT crashes.
      */
-    fun resolveSubPath(context: Context, fileName: String): String {
+    fun resolveSubPath(context: Context, targetDirType: String, fileName: String): String {
         val subfolder = getSubfolder(context)
-        return if (subfolder.isNotBlank()) {
-            "$subfolder/$fileName"
-        } else {
-            fileName
+        if (subfolder.isBlank()) {
+            return fileName
         }
+        return runCatching {
+            val publicDir = Environment.getExternalStoragePublicDirectory(targetDirType)
+            val subDir = java.io.File(publicDir, subfolder)
+            val exists = subDir.exists() || subDir.mkdirs()
+            if (exists && subDir.exists()) {
+                "$subfolder/$fileName"
+            } else {
+                fileName
+            }
+        }.getOrDefault(fileName)
     }
 
     /**

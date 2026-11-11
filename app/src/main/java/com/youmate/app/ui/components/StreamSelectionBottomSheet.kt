@@ -159,11 +159,22 @@ fun StreamSelectionBottomSheet(
             ) {
                 Icon(Icons.Default.Download, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
+                val buttonText = when (uiState.selectedTab) {
+                    MediaType.VIDEO -> {
+                        val res = uiState.selectedVideoStream?.resolution.orEmpty()
+                        val fmt = uiState.selectedVideoFormat.uppercase()
+                        val size = uiState.selectedVideoStream?.formattedSize?.takeIf { it.isNotBlank() }?.let { " • $it" }.orEmpty()
+                        "Descargar Video ($res $fmt$size)"
+                    }
+                    MediaType.AUDIO -> {
+                        val br = uiState.selectedAudioStream?.bitrate ?: 0
+                        val fmt = uiState.selectedAudioFormat.uppercase()
+                        val size = uiState.selectedAudioStream?.formattedSize?.takeIf { it.isNotBlank() }?.let { " • $it" }.orEmpty()
+                        "Descargar Audio ($br kbps $fmt$size)"
+                    }
+                }
                 Text(
-                    text = when (uiState.selectedTab) {
-                        MediaType.VIDEO -> "Descargar Video (${uiState.selectedVideoStream?.resolution.orEmpty()} ${uiState.selectedVideoFormat.uppercase()})"
-                        MediaType.AUDIO -> "Descargar Audio (${uiState.selectedAudioStream?.bitrate ?: 0} kbps ${uiState.selectedAudioFormat.uppercase()})"
-                    },
+                    text = buttonText,
                     style = MaterialTheme.typography.labelLarge,
                     fontSize = 15.sp
                 )
@@ -267,11 +278,21 @@ fun VideoSelectionSection(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text(
-                                text = stream.resolution,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = stream.resolution,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (stream.formattedSize.isNotBlank()) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "• ${stream.formattedSize}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             Text(
                                 text = if (stream.isVideoOnly) "Video HD (DASH)" else "Video + Audio integrado",
                                 style = MaterialTheme.typography.bodySmall,
@@ -390,11 +411,21 @@ fun AudioSelectionSection(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text(
-                                text = if (stream.bitrate > 0) "${stream.bitrate} kbps" else "Calidad Estándar",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (stream.bitrate > 0) "${stream.bitrate} kbps" else "Calidad Estándar",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (stream.formattedSize.isNotBlank()) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "• ${stream.formattedSize}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Audio estéreo (${stream.quality.ifBlank { "Original" }})",
                                 style = MaterialTheme.typography.bodySmall,

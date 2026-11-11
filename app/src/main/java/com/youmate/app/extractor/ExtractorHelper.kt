@@ -11,9 +11,32 @@ import org.schabi.newpipe.extractor.localization.ContentCountry
 import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.stream.StreamInfo
 
+import java.util.Locale
+
 object ExtractorHelper {
 
     private var isInitialized = false
+
+    fun formatFileSize(bytes: Long): String {
+        if (bytes <= 0L) return ""
+        return when {
+            bytes >= 1024L * 1024L * 1024L -> String.format(Locale.getDefault(), "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+            bytes >= 1024L * 1024L -> String.format(Locale.getDefault(), "%.1f MB", bytes / (1024.0 * 1024.0))
+            bytes >= 1024L -> String.format(Locale.getDefault(), "%.0f KB", bytes / 1024.0)
+            else -> "$bytes B"
+        }
+    }
+
+    fun resolveStreamSizeBytes(url: String, bitrate: Int, durationSeconds: Long): Long {
+        val clen = Regex("""[?&]clen=(\d+)""").find(url)?.groupValues?.get(1)?.toLongOrNull()
+        if (clen != null && clen > 0L) {
+            return clen
+        }
+        if (bitrate > 0 && durationSeconds > 0L) {
+            return (bitrate.toLong() * durationSeconds) / 8L
+        }
+        return 0L
+    }
 
     /**
      * Initializes NewPipeExtractor with OkHttp Downloader and default localization.
@@ -90,14 +113,19 @@ object ExtractorHelper {
                 val formatSuffix = runCatching { stream.format?.suffix }.getOrNull()
                     ?: runCatching { stream.format?.name?.lowercase() }.getOrNull()
                     ?: "mp4"
+                val url = stream.url.orEmpty()
+                val bitrate = runCatching { stream.bitrate }.getOrDefault(0)
+                val sizeBytes = resolveStreamSizeBytes(url, bitrate, duration)
 
                 rawVideoList.add(
                     VideoStreamItem(
                         resolution = stream.resolution.orEmpty().ifBlank { stream.quality.orEmpty() },
                         format = formatSuffix,
-                        url = stream.url.orEmpty(),
+                        url = url,
                         isVideoOnly = false,
-                        quality = stream.quality.orEmpty()
+                        quality = stream.quality.orEmpty(),
+                        sizeBytes = sizeBytes,
+                        formattedSize = formatFileSize(sizeBytes)
                     )
                 )
             }
@@ -107,14 +135,19 @@ object ExtractorHelper {
                 val formatSuffix = runCatching { stream.format?.suffix }.getOrNull()
                     ?: runCatching { stream.format?.name?.lowercase() }.getOrNull()
                     ?: "mp4"
+                val url = stream.url.orEmpty()
+                val bitrate = runCatching { stream.bitrate }.getOrDefault(0)
+                val sizeBytes = resolveStreamSizeBytes(url, bitrate, duration)
 
                 rawVideoList.add(
                     VideoStreamItem(
                         resolution = stream.resolution.orEmpty().ifBlank { stream.quality.orEmpty() },
                         format = formatSuffix,
-                        url = stream.url.orEmpty(),
+                        url = url,
                         isVideoOnly = true,
-                        quality = stream.quality.orEmpty()
+                        quality = stream.quality.orEmpty(),
+                        sizeBytes = sizeBytes,
+                        formattedSize = formatFileSize(sizeBytes)
                     )
                 )
             }
@@ -135,13 +168,19 @@ object ExtractorHelper {
                 val formatSuffix = runCatching { stream.format?.suffix }.getOrNull()
                     ?: runCatching { stream.format?.name?.lowercase() }.getOrNull()
                     ?: "m4a"
+                val url = stream.url.orEmpty()
+                val bitrate = stream.averageBitrate
+                val rawBitrate = runCatching { stream.bitrate }.getOrDefault(bitrate * 1000)
+                val sizeBytes = resolveStreamSizeBytes(url, rawBitrate, duration)
 
                 rawAudioList.add(
                     AudioStreamItem(
                         format = formatSuffix,
-                        bitrate = stream.averageBitrate,
-                        url = stream.url.orEmpty(),
-                        quality = stream.quality.orEmpty()
+                        bitrate = bitrate,
+                        url = url,
+                        quality = stream.quality.orEmpty(),
+                        sizeBytes = sizeBytes,
+                        formattedSize = formatFileSize(sizeBytes)
                     )
                 )
             }
@@ -150,12 +189,16 @@ object ExtractorHelper {
             // offer the progressive stream as an M4A audio option so audio download is always available.
             if (rawAudioList.isEmpty()) {
                 streamInfo.videoStreams?.firstOrNull { !it.url.isNullOrBlank() }?.let { progressive ->
+                    val url = progressive.url.orEmpty()
+                    val sizeBytes = resolveStreamSizeBytes(url, 128_000, duration)
                     rawAudioList.add(
                         AudioStreamItem(
                             format = "m4a",
                             bitrate = 128,
-                            url = progressive.url.orEmpty(),
-                            quality = "128 kbps (Audio AAC)"
+                            url = url,
+                            quality = "128 kbps (Audio AAC)",
+                            sizeBytes = sizeBytes,
+                            formattedSize = formatFileSize(sizeBytes)
                         )
                     )
                 }

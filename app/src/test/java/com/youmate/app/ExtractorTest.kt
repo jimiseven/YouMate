@@ -21,11 +21,11 @@ class ExtractorTest {
             println("Video title: ${data.title}")
             println("Total video streams extracted: ${data.videoStreams.size}")
             data.videoStreams.forEach {
-                println("  Video: ${it.resolution} [${it.format}] isVideoOnly=${it.isVideoOnly}")
+                println("  Video: ${it.resolution} [${it.format}] - Size: ${it.formattedSize} (${it.sizeBytes} B) isVideoOnly=${it.isVideoOnly}")
             }
             println("Total audio streams extracted: ${data.audioStreams.size}")
             data.audioStreams.forEach {
-                println("  Audio: ${it.bitrate} kbps [${it.format}]")
+                println("  Audio: ${it.bitrate} kbps [${it.format}] - Size: ${it.formattedSize} (${it.sizeBytes} B)")
             }
 
             assertTrue("Should contain 1080p", data.videoStreams.any { it.resolution.contains("1080") })
@@ -33,6 +33,7 @@ class ExtractorTest {
             assertTrue("Should contain 480p", data.videoStreams.any { it.resolution.contains("480") })
             assertTrue("Should contain 360p", data.videoStreams.any { it.resolution.contains("360") })
             assertFalse("Audio streams should not be empty", data.audioStreams.isEmpty())
+            assertTrue("Streams should have formatted sizes", data.videoStreams.any { it.formattedSize.isNotBlank() })
         }
     }
 }

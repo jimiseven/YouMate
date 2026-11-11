@@ -115,7 +115,7 @@ fun SettingsDialog(
 
                 // Subfolder TextField
                 Text(
-                    text = "Subcarpeta dentro de la ubicación:",
+                    text = "Subcarpeta (Opcional):",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -123,13 +123,13 @@ fun SettingsDialog(
                 OutlinedTextField(
                     value = subfolderText,
                     onValueChange = { subfolderText = it },
-                    placeholder = { Text("Ej. YouMate") },
+                    placeholder = { Text("Opcional (ej. YouMate)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 )
                 Text(
-                    text = "Deja en blanco para guardar directo en la carpeta raíz.",
+                    text = "Deja en blanco para guardar directo en la carpeta seleccionada.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
