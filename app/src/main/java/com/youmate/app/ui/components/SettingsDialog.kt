@@ -1,5 +1,6 @@
 package com.youmate.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,10 +35,6 @@ fun SettingsDialog(
     uiState: MainUiState,
     onDismissRequest: () -> Unit
 ) {
-    val context = LocalContext.current
-    var selectedLocation by remember(uiState.storageLocation) { mutableStateOf(uiState.storageLocation) }
-    var subfolderText by remember(uiState.subfolder) { mutableStateOf(uiState.subfolder) }
-    var separateAudio by remember(uiState.separateAudio) { mutableStateOf(uiState.separateAudio) }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Card(
@@ -72,7 +69,7 @@ fun SettingsDialog(
                 }
 
                 Text(
-                    text = "Carpeta principal de videos:",
+                    text = "Carpeta de almacenamiento:",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -80,134 +77,35 @@ fun SettingsDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Location Options
-                StorageLocation.entries.forEach { loc ->
-                    val isSelected = loc == selectedLocation
-                    val borderColor = if (isSelected) RedPrimary else MaterialTheme.colorScheme.surfaceVariant
-                    val bgColor = if (isSelected) RedPrimary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bgColor)
-                            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
-                            .clickable { selectedLocation = loc }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { selectedLocation = loc },
-                            colors = RadioButtonDefaults.colors(selectedColor = RedPrimary)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = loc.displayName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Subfolder TextField
-                Text(
-                    text = "Subcarpeta (Opcional):",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = subfolderText,
-                    onValueChange = { subfolderText = it },
-                    placeholder = { Text("Opcional (ej. YouMate)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                Text(
-                    text = "Deja en blanco para guardar directo en la carpeta seleccionada.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Separate Audio Switch
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = RedPrimary.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, RedPrimary.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = RedPrimary, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Descargas (Download)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Guardar audios en Música",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Envía los archivos de audio a la carpeta pública 'Music'.",
+                            text = "Ruta: Almacenamiento interno > Download",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    Switch(
-                        checked = separateAudio,
-                        onCheckedChange = { separateAudio = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = RedPrimary,
-                            checkedTrackColor = RedPrimary.copy(alpha = 0.3f)
-                        )
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Live Preview Card
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Rutas de guardado:",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
+                            text = "Los videos y audios se guardan en la carpeta pública oficial 'Download' para garantizar compatibilidad con Android 13+ (Scoped Storage) y que cualquier reproductor o galería los detecte de inmediato.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Videocam, contentDescription = null, modifier = Modifier.size(16.dp), tint = RedPrimary)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            val dirName = when (selectedLocation) {
-                                StorageLocation.DOWNLOADS -> "Download"
-                                StorageLocation.MOVIES -> "Movies"
-                                StorageLocation.MUSIC -> "Music"
-                                StorageLocation.DCIM -> "DCIM"
-                            }
-                            val sub = subfolderText.trim()
-                            val videoPath = if (sub.isNotBlank()) "Almacenamiento > $dirName > $sub/" else "Almacenamiento > $dirName/"
-                            Text(text = videoPath, style = MaterialTheme.typography.bodySmall, fontSize = 12.sp)
-                        }
-                        if (separateAudio) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(16.dp), tint = RedPrimary)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                val sub = subfolderText.trim()
-                                val audioPath = if (sub.isNotBlank()) "Almacenamiento > Music > $sub/" else "Almacenamiento > Music/"
-                                Text(text = audioPath, style = MaterialTheme.typography.bodySmall, fontSize = 12.sp)
-                            }
-                        }
                     }
                 }
 
@@ -218,24 +116,15 @@ fun SettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismissRequest) {
-                        Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = {
-                            viewModel.updateStorageLocation(context, selectedLocation)
-                            viewModel.updateSubfolder(context, subfolderText)
-                            viewModel.updateSeparateAudio(context, separateAudio)
-                            onDismissRequest()
-                        },
+                        onClick = onDismissRequest,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = RedPrimary,
                             contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Guardar")
+                        Text("Entendido")
                     }
                 }
             }

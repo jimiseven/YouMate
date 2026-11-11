@@ -8,6 +8,9 @@
     <!-- Android 13+ (API 33) notification permission for DownloadManager progress -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Compatibility for devices running Android 9 or lower -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
     <application
         android:name=".YouMateApp"
         android:allowBackup="true"
@@ -15,7 +18,9 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.YouMate">
+        android:theme="@style/Theme.YouMate"
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true">
 
         <activity
             android:name=".ui.MainActivity"

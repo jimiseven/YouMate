@@ -90,7 +90,9 @@ class MainViewModel : ViewModel() {
             val result = ExtractorHelper.extractMedia(cleanUrl)
 
             result.onSuccess { data ->
-                val initialVideo = data.videoStreams.firstOrNull { it.format.equals("mp4", ignoreCase = true) }
+                val initialVideo = data.videoStreams.firstOrNull { !it.isVideoOnly && it.format.equals("mp4", ignoreCase = true) }
+                    ?: data.videoStreams.firstOrNull { !it.isVideoOnly }
+                    ?: data.videoStreams.firstOrNull { it.format.equals("mp4", ignoreCase = true) }
                     ?: data.videoStreams.firstOrNull()
                 val initialAudio = data.audioStreams.firstOrNull { it.format.equals("m4a", ignoreCase = true) }
                     ?: data.audioStreams.firstOrNull()
@@ -200,6 +202,16 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(separateAudio = enabled) }
     }
 
+    fun showDownloadStatus(message: String, isError: Boolean = false) {
+        _uiState.update {
+            if (isError) {
+                it.copy(errorMessage = message)
+            } else {
+                it.copy(successMessage = message)
+            }
+        }
+    }
+
     fun startDownload(context: Context) {
         val state = _uiState.value
         val result = state.extractionResult ?: return
@@ -235,10 +247,9 @@ class MainViewModel : ViewModel() {
             format = format,
             isAudio = isAudio
         ).onSuccess {
-            val previewPath = SettingsHelper.getPreviewDisplayPath(context, isAudio)
             _uiState.update {
                 it.copy(
-                    successMessage = "Descarga iniciada en $previewPath",
+                    successMessage = "Descarga iniciada. Guardando en 'Descargas'...",
                     urlInput = ""
                 )
             }

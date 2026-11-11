@@ -3,7 +3,8 @@ package com.youmate.app.download
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
-import com.youmate.app.settings.SettingsHelper
+import android.os.Environment
+import java.io.File
 
 object DownloadHelper {
 
@@ -16,7 +17,7 @@ object DownloadHelper {
             .replace(Regex("[\\\\/:*?\"<>|]"), "_")
             .replace(Regex("\\s+"), " ")
             .trim()
-            .take(120)
+            .take(100)
     }
 
     /**
@@ -35,8 +36,23 @@ object DownloadHelper {
     }
 
     /**
+     * Generates a unique, collision-safe file name in the public Downloads directory.
+     */
+    private fun resolveUniqueFileName(baseName: String, extension: String): String {
+        val candidate = "$baseName.$extension"
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val file = File(downloadsDir, candidate)
+        return if (file.exists()) {
+            val suffix = (System.currentTimeMillis() % 100000).toString()
+            "${baseName}_$suffix.$extension"
+        } else {
+            candidate
+        }
+    }
+
+    /**
      * Enqueues a media download into Android's native DownloadManager.
-     * Saves file into the user-selected public directory and subfolder.
+     * Uses Environment.DIRECTORY_DOWNLOADS directly for 100% Scoped Storage reliability.
      * Shows system progress notification and completion banner.
      *
      * @param context Android context
@@ -56,29 +72,27 @@ object DownloadHelper {
         return runCatching {
             val safeExtension = format.lowercase().removePrefix(".")
             val safeTitle = sanitizeFileName(title).ifBlank { "YouTube_Media" }
-            val fileName = "$safeTitle.$safeExtension"
+            val fileName = resolveUniqueFileName(safeTitle, safeExtension)
             val mimeType = getMimeType(safeExtension)
-
-            val targetDirType = SettingsHelper.resolveDirectoryType(context, isAudio)
-            val subPath = SettingsHelper.resolveSubPath(context, targetDirType, fileName)
 
             val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
                 ?: throw IllegalStateException("DownloadManager no está disponible en este dispositivo.")
 
             val request = DownloadManager.Request(Uri.parse(streamUrl)).apply {
                 setTitle(fileName)
-                setDescription("Descargando $fileName")
+                setDescription(if (isAudio) "Descargando audio..." else "Descargando video...")
                 setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                setDestinationInExternalPublicDir(targetDirType, subPath)
+                // Always save to DIRECTORY_DOWNLOADS for guaranteed Scoped Storage permissions across all Android versions
+                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
                 setAllowedOverMetered(true)
                 setAllowedOverRoaming(true)
                 setMimeType(mimeType)
-                // Safely add headers if supported by system DownloadManager
+                // Browser User-Agent header for CDN compatibility
                 runCatching {
-                    addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
-                }
-                runCatching {
-                    addRequestHeader("Referer", "https://www.youtube.com")
+                    addRequestHeader(
+                        "User-Agent",
+                        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                    )
                 }
             }
 

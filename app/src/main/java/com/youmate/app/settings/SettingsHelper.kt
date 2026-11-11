@@ -93,21 +93,6 @@ object SettingsHelper {
      * Returns a human-readable display path for preview in UI.
      */
     fun getPreviewDisplayPath(context: Context, isAudio: Boolean = false): String {
-        val dir = if (isAudio && isSeparateAudioEnabled(context)) {
-            "Music"
-        } else {
-            when (getStorageLocation(context)) {
-                StorageLocation.DOWNLOADS -> "Download"
-                StorageLocation.MOVIES -> "Movies"
-                StorageLocation.MUSIC -> "Music"
-                StorageLocation.DCIM -> "DCIM"
-            }
-        }
-        val subfolder = getSubfolder(context)
-        return if (subfolder.isNotBlank()) {
-            "Almacenamiento > $dir > $subfolder/"
-        } else {
-            "Almacenamiento > $dir/"
-        }
+        return "Almacenamiento > Descargas (Download)/"
     }
 }
